@@ -1,126 +1,131 @@
 ﻿from datetime import date, timedelta
+
 from django.contrib import messages
 from django.db.models import Avg, Count
 from django.http import Http404
 from django.shortcuts import get_object_or_404, redirect, render
+
 from .forms import (
+    AdministrativeProcessForm,
     AttendanceRecordForm,
     EnrollmentForm,
     GradeForm,
+    InstitutionalProjectForm,
+    ManagementPlanForm,
     SchoolClassFilterForm,
+    ServiceDeskTicketForm,
     StudentFilterForm,
     StudentForm,
 )
 from .models import (
+    AdministrativeProcess,
     Announcement,
     Assessment,
     AttendanceRecord,
     ClassSubject,
     Enrollment,
     Grade,
+    InstitutionalProject,
+    ManagementPlan,
     SchoolClass,
+    ServiceDeskTicket,
     Student,
     Subject,
     Teacher,
 )
 
 
-MODULE_PAGES = {
+MODULE_CONFIG = {
     'documentos-processos': {
         'title': 'Documentos/Processos',
-        'description': 'Painel de tramitacao documental, fluxo interno e acompanhamento de processos administrativos.',
-        'highlights': ['Protocolos em aberto', 'Caixa de entrada setorial', 'Prazos de despacho'],
-        'actions': ['Novo processo', 'Consultar protocolo', 'Relatorio de andamento'],
+        'kind': 'process',
+        'description': 'Cadastro e acompanhamento de processos administrativos com prazo e setor responsavel.',
     },
     'programa-gestao': {
         'title': 'Programa de Gestao',
-        'description': 'Acompanhamento de planos de entrega, produtividade e pactuacao de metas institucionais.',
-        'highlights': ['Metas em curso', 'Pendencias de aprovacao', 'Ciclos de avaliacao'],
-        'actions': ['Abrir plano', 'Validar entregas', 'Emitir consolidado'],
+        'kind': 'plan',
+        'description': 'Planos de entrega, progresso das metas e organizacao de pactuacoes.',
     },
     'ensino': {
         'title': 'Ensino',
-        'description': 'Gestao academica de turmas, diarios, horarios, componentes curriculares e calendarios letivos.',
-        'highlights': ['Turmas ativas', 'Diarios pendentes', 'Aulas previstas'],
-        'actions': ['Abrir diario', 'Montar horario', 'Fechar etapa'],
+        'kind': 'teaching',
+        'description': 'Visao consolidada de alunos, turmas, avaliacoes e frequencia.',
     },
     'pesquisa': {
         'title': 'Pesquisa',
-        'description': 'Controle de editais, projetos, bolsistas e acompanhamento de execucao tecnica.',
-        'highlights': ['Projetos vigentes', 'Bolsas ativas', 'Prestacoes pendentes'],
-        'actions': ['Novo projeto', 'Avaliar proposta', 'Exportar indicadores'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.RESEARCH,
+        'description': 'Projetos de pesquisa, coordenacao e situacao de execucao.',
     },
     'extensao': {
         'title': 'Extensao',
-        'description': 'Gerenciamento de acoes extensionistas, programas, eventos e certificacoes.',
-        'highlights': ['Acoes abertas', 'Inscricoes em analise', 'Certificados emitidos'],
-        'actions': ['Cadastrar acao', 'Gerar certificado', 'Publicar chamada'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.EXTENSION,
+        'description': 'Acoes extensionistas, programas e situacao atual.',
     },
     'gestao-pessoas': {
         'title': 'Gestao de Pessoas',
-        'description': 'Painel de servidores, afastamentos, ferias, lotacoes e autorizacoes funcionais.',
-        'highlights': ['Ferias agendadas', 'Solicitacoes em fila', 'Movimentacoes internas'],
-        'actions': ['Consultar servidor', 'Registrar afastamento', 'Liberar solicitacao'],
+        'kind': 'people',
+        'description': 'Quadro de servidores docentes e distribuicao operacional.',
     },
     'administracao': {
         'title': 'Administracao',
-        'description': 'Suporte a compras, contratos, patrimonio, almoxarifado e rotinas administrativas.',
-        'highlights': ['Requisicoes abertas', 'Contratos vigentes', 'Patrimonio monitorado'],
-        'actions': ['Nova requisicao', 'Acompanhar contrato', 'Inventario rapido'],
+        'kind': 'ticket',
+        'area': ServiceDeskTicket.ADMIN,
+        'description': 'Demandas administrativas, prioridades e fila de atendimento.',
     },
     'tec-informacao': {
         'title': 'Tec. da Informacao',
-        'description': 'Monitoramento de chamados, ativos de TI, acesso a sistemas e catalogo tecnico.',
-        'highlights': ['Chamados abertos', 'Equipamentos ativos', 'Acessos pendentes'],
-        'actions': ['Abrir chamado', 'Registrar ativo', 'Liberar acesso'],
+        'kind': 'ticket',
+        'area': ServiceDeskTicket.IT,
+        'description': 'Chamados tecnicos, priorizacao e acompanhamento de suporte.',
     },
     'desenvolvimento-institucional': {
         'title': 'Des. Institucional',
-        'description': 'Acompanhamento de indicadores, metas estrategicas, planejamento e governanca.',
-        'highlights': ['Indicadores criticos', 'Planos em revisao', 'Acoes estrategicas'],
-        'actions': ['Abrir painel', 'Atualizar meta', 'Gerar relatorio'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.DEVELOPMENT,
+        'description': 'Projetos estrategicos e indicadores de governanca.',
     },
     'central-servicos': {
         'title': 'Central de Servicos',
-        'description': 'Centralizacao de atendimentos, filas, SLA e resolucao de demandas internas.',
-        'highlights': ['Solicitacoes ativas', 'SLA no limite', 'Equipes em atendimento'],
-        'actions': ['Novo atendimento', 'Priorizar fila', 'Fechar demanda'],
+        'kind': 'ticket',
+        'area': ServiceDeskTicket.CENTRAL,
+        'description': 'Demandas centralizadas com SLA e acompanhamento de fila.',
     },
     'internacionalizacao': {
         'title': 'Internacionalizacao',
-        'description': 'Gestao de mobilidade, convenios, editais internacionais e acompanhamento de intercambios.',
-        'highlights': ['Convenios ativos', 'Editais abertos', 'Mobilidades em curso'],
-        'actions': ['Abrir edital', 'Registrar convenio', 'Emitir acompanhamento'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.INTERNATIONAL,
+        'description': 'Convenios, editais e iniciativas de mobilidade.',
     },
     'atividades-estudantis': {
         'title': 'Atividades Estudantis',
-        'description': 'Acompanhamento de assistencia estudantil, auxilios, participacoes e beneficios.',
-        'highlights': ['Auxilios ativos', 'Analises pendentes', 'Atendimentos estudantis'],
-        'actions': ['Nova solicitacao', 'Avaliar beneficio', 'Emitir lista'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.STUDENT,
+        'description': 'Acoes e programas voltados ao apoio estudantil.',
     },
     'comunicacao-social': {
         'title': 'Comunicacao Social',
-        'description': 'Planejamento de campanhas, publicacoes, agenda institucional e comunicados oficiais.',
-        'highlights': ['Campanhas abertas', 'Publicacoes agendadas', 'Demandas de comunicacao'],
-        'actions': ['Criar comunicado', 'Agendar publicacao', 'Organizar campanha'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.COMMUNICATION,
+        'description': 'Campanhas, pautas e iniciativas de comunicacao institucional.',
     },
     'seguranca-institucional': {
         'title': 'Seguranca Institucional',
-        'description': 'Controle de ocorrencias, acessos, rondas e protocolos de seguranca.',
-        'highlights': ['Ocorrencias recentes', 'Acessos monitorados', 'Protocolos ativos'],
-        'actions': ['Registrar ocorrencia', 'Abrir ronda', 'Consultar protocolo'],
+        'kind': 'ticket',
+        'area': ServiceDeskTicket.SECURITY,
+        'description': 'Ocorrencias, rondas e filas de atendimento de seguranca.',
     },
     'auditoria': {
         'title': 'Auditoria',
-        'description': 'Acompanhamento de evidencias, planos de acao, recomendacoes e conformidade.',
-        'highlights': ['Achados abertos', 'Planos em execucao', 'Prazos de resposta'],
-        'actions': ['Nova analise', 'Anexar evidencia', 'Emitir parecer'],
+        'kind': 'project',
+        'project_type': InstitutionalProject.AUDIT,
+        'description': 'Frentes de auditoria, evidencias e situacao de acompanhamento.',
     },
     'sair': {
         'title': 'Sair',
-        'description': 'Sessao local encerrada. Utilize esta area para finalizar a navegacao e retornar ao inicio.',
-        'highlights': ['Sessao finalizada', 'Acesso encerrado', 'Retorno seguro'],
-        'actions': ['Voltar ao inicio', 'Abrir painel', 'Encerrar navegador'],
+        'kind': 'exit',
+        'description': 'Area de encerramento seguro da sessao local.',
     },
 }
 
@@ -165,26 +170,10 @@ def seed_school_data():
         defaults={'name': 'Portugues', 'workload_hours': 80},
     )
 
-    cs1, _ = ClassSubject.objects.get_or_create(
-        school_class=c1,
-        subject=s1,
-        defaults={'teacher': t1},
-    )
-    cs2, _ = ClassSubject.objects.get_or_create(
-        school_class=c1,
-        subject=s2,
-        defaults={'teacher': t2},
-    )
-    cs3, _ = ClassSubject.objects.get_or_create(
-        school_class=c2,
-        subject=s1,
-        defaults={'teacher': t1},
-    )
-    cs4, _ = ClassSubject.objects.get_or_create(
-        school_class=c2,
-        subject=s2,
-        defaults={'teacher': t2},
-    )
+    cs1, _ = ClassSubject.objects.get_or_create(school_class=c1, subject=s1, defaults={'teacher': t1})
+    cs2, _ = ClassSubject.objects.get_or_create(school_class=c1, subject=s2, defaults={'teacher': t2})
+    cs3, _ = ClassSubject.objects.get_or_create(school_class=c2, subject=s1, defaults={'teacher': t1})
+    cs4, _ = ClassSubject.objects.get_or_create(school_class=c2, subject=s2, defaults={'teacher': t2})
 
     st1, _ = Student.objects.update_or_create(
         registration='2026001',
@@ -293,19 +282,88 @@ def seed_school_data():
 
     Announcement.objects.get_or_create(
         title='Reuniao com responsaveis',
-        defaults={
-            'body': 'Sexta-feira as 19h no auditorio principal.',
-            'level': Announcement.WARNING,
-        },
+        defaults={'body': 'Sexta-feira as 19h no auditorio principal.', 'level': Announcement.WARNING},
     )
     Announcement.objects.get_or_create(
         title='Diario liberado',
+        defaults={'body': 'Lacamento de notas do bimestre disponivel para docentes.', 'level': Announcement.SUCCESS},
+    )
+
+    AdministrativeProcess.objects.get_or_create(
+        protocol='PROC-2026-001',
         defaults={
-            'body': 'Lacamento de notas do bimestre disponivel para docentes.',
-            'level': Announcement.SUCCESS,
+            'subject': 'Aquisição de kits de laboratorio',
+            'sector': 'Administracao',
+            'status': AdministrativeProcess.IN_PROGRESS,
+            'deadline': date.today() + timedelta(days=7),
+        },
+    )
+    AdministrativeProcess.objects.get_or_create(
+        protocol='PROC-2026-002',
+        defaults={
+            'subject': 'Contratacao de plataforma educacional',
+            'sector': 'Tec. da Informacao',
+            'status': AdministrativeProcess.OPEN,
+            'deadline': date.today() + timedelta(days=12),
         },
     )
 
+    ManagementPlan.objects.get_or_create(
+        title='Plano de entregas do bimestre',
+        defaults={
+            'owner': 'Diretoria Academica',
+            'progress': 62,
+            'status': ManagementPlan.ACTIVE,
+            'due_date': date.today() + timedelta(days=15),
+        },
+    )
+    ManagementPlan.objects.get_or_create(
+        title='Pactuacao de metas administrativas',
+        defaults={
+            'owner': 'Coordenacao Administrativa',
+            'progress': 35,
+            'status': ManagementPlan.DRAFT,
+            'due_date': date.today() + timedelta(days=20),
+        },
+    )
+
+    project_defaults = [
+        ('Projeto Horizonte', InstitutionalProject.RESEARCH, t1, InstitutionalProject.ACTIVE),
+        ('Rede Comunidade Viva', InstitutionalProject.EXTENSION, t2, InstitutionalProject.ACTIVE),
+        ('Programa Global Campus', InstitutionalProject.INTERNATIONAL, t1, InstitutionalProject.DRAFT),
+        ('Painel de Indicadores 2026', InstitutionalProject.DEVELOPMENT, t2, InstitutionalProject.ACTIVE),
+        ('Ciclo de Apoio ao Estudante', InstitutionalProject.STUDENT, t1, InstitutionalProject.ACTIVE),
+        ('Campanha Institucional 2026', InstitutionalProject.COMMUNICATION, t2, InstitutionalProject.ACTIVE),
+        ('Trilha de Conformidade Interna', InstitutionalProject.AUDIT, t1, InstitutionalProject.DRAFT),
+    ]
+    for idx, project in enumerate(project_defaults, start=1):
+        title, project_type, coordinator, status = project
+        InstitutionalProject.objects.get_or_create(
+            title=title,
+            defaults={
+                'project_type': project_type,
+                'coordinator': coordinator,
+                'status': status,
+                'start_date': date.today() - timedelta(days=idx * 3),
+            },
+        )
+
+    ticket_defaults = [
+        (ServiceDeskTicket.CENTRAL, 'Setor Academico', 'Atualizacao de atendimento', ServiceDeskTicket.MEDIUM, ServiceDeskTicket.WORKING),
+        (ServiceDeskTicket.IT, 'Laboratorio 02', 'Falha em rede local', ServiceDeskTicket.HIGH, ServiceDeskTicket.OPEN),
+        (ServiceDeskTicket.SECURITY, 'Portaria Norte', 'Revisao de acesso', ServiceDeskTicket.MEDIUM, ServiceDeskTicket.WORKING),
+        (ServiceDeskTicket.ADMIN, 'Compras', 'Analise de requisicao 418', ServiceDeskTicket.LOW, ServiceDeskTicket.OPEN),
+    ]
+    for area, requester, subject, priority, status in ticket_defaults:
+        ServiceDeskTicket.objects.get_or_create(
+            area=area,
+            requester=requester,
+            subject=subject,
+            defaults={'priority': priority, 'status': status},
+        )
+
+
+# Existing app pages
 
 def dashboard(request):
     seed_school_data()
@@ -496,17 +554,199 @@ def agenda_page(request):
     return render(request, 'agenda.html', {'events': upcoming})
 
 
+# Module pages
+
 def module_page(request, module_key):
     seed_school_data()
-    module = MODULE_PAGES.get(module_key)
-    if module is None:
+    config = MODULE_CONFIG.get(module_key)
+    if config is None:
         raise Http404('Modulo nao encontrado.')
 
+    kind = config['kind']
+    if kind == 'process':
+        return _process_module_page(request, module_key, config)
+    if kind == 'plan':
+        return _plan_module_page(request, module_key, config)
+    if kind == 'project':
+        return _project_module_page(request, module_key, config)
+    if kind == 'ticket':
+        return _ticket_module_page(request, module_key, config)
+    if kind == 'teaching':
+        return _teaching_module_page(request, module_key, config)
+    if kind == 'people':
+        return _people_module_page(request, module_key, config)
+    if kind == 'exit':
+        return _exit_module_page(request, module_key, config)
+    raise Http404('Modulo nao configurado.')
+
+
+def _render_operational_module(request, config, module_key, form, items, table_headers, row_builder):
+    rows = [row_builder(item) for item in items]
     context = {
         'module_key': module_key,
-        'module_title': module['title'],
-        'module_description': module['description'],
-        'module_highlights': module['highlights'],
-        'module_actions': module['actions'],
+        'module_title': config['title'],
+        'module_description': config['description'],
+        'form': form,
+        'table_headers': table_headers,
+        'table_rows': rows,
     }
-    return render(request, 'module_page.html', context)
+    return render(request, 'module_operational.html', context)
+
+
+def _process_module_page(request, module_key, config):
+    form = AdministrativeProcessForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Processo registrado com sucesso.')
+        return redirect('module_page', module_key=module_key)
+
+    items = AdministrativeProcess.objects.all()[:20]
+    return _render_operational_module(
+        request,
+        config,
+        module_key,
+        form,
+        items,
+        ['Protocolo', 'Assunto', 'Setor', 'Status', 'Prazo'],
+        lambda item: [item.protocol, item.subject, item.sector, item.get_status_display(), item.deadline.strftime('%d/%m/%Y')],
+    )
+
+
+def _plan_module_page(request, module_key, config):
+    form = ManagementPlanForm(request.POST or None)
+    if request.method == 'POST' and form.is_valid():
+        form.save()
+        messages.success(request, 'Plano registrado com sucesso.')
+        return redirect('module_page', module_key=module_key)
+
+    items = ManagementPlan.objects.all()[:20]
+    return _render_operational_module(
+        request,
+        config,
+        module_key,
+        form,
+        items,
+        ['Plano', 'Responsavel', 'Progresso', 'Status', 'Prazo'],
+        lambda item: [item.title, item.owner, f'{item.progress}%', item.get_status_display(), item.due_date.strftime('%d/%m/%Y')],
+    )
+
+
+def _project_module_page(request, module_key, config):
+    form = InstitutionalProjectForm(request.POST or None)
+    form.fields['project_type'].initial = config['project_type']
+    form.fields['project_type'].disabled = True
+    if request.method == 'POST' and form.is_valid():
+        project = form.save(commit=False)
+        project.project_type = config['project_type']
+        project.save()
+        messages.success(request, 'Projeto registrado com sucesso.')
+        return redirect('module_page', module_key=module_key)
+
+    items = InstitutionalProject.objects.filter(project_type=config['project_type']).select_related('coordinator')[:20]
+    return _render_operational_module(
+        request,
+        config,
+        module_key,
+        form,
+        items,
+        ['Projeto', 'Coordenacao', 'Status', 'Inicio'],
+        lambda item: [
+            item.title,
+            item.coordinator.full_name if item.coordinator else 'Nao definida',
+            item.get_status_display(),
+            item.start_date.strftime('%d/%m/%Y'),
+        ],
+    )
+
+
+def _ticket_module_page(request, module_key, config):
+    form = ServiceDeskTicketForm(request.POST or None)
+    form.fields['area'].initial = config['area']
+    form.fields['area'].disabled = True
+    if request.method == 'POST' and form.is_valid():
+        ticket = form.save(commit=False)
+        ticket.area = config['area']
+        ticket.save()
+        messages.success(request, 'Chamado registrado com sucesso.')
+        return redirect('module_page', module_key=module_key)
+
+    items = ServiceDeskTicket.objects.filter(area=config['area'])[:20]
+    return _render_operational_module(
+        request,
+        config,
+        module_key,
+        form,
+        items,
+        ['Solicitante', 'Assunto', 'Prioridade', 'Status'],
+        lambda item: [item.requester, item.subject, item.get_priority_display(), item.get_status_display()],
+    )
+
+
+def _teaching_module_page(request, module_key, config):
+    context = {
+        'module_key': module_key,
+        'module_title': config['title'],
+        'module_description': config['description'],
+        'summary_cards': [
+            {'label': 'Alunos ativos', 'value': Student.objects.filter(status=Student.ACTIVE).count(), 'badge': 'Cadastro em dia'},
+            {'label': 'Turmas abertas', 'value': SchoolClass.objects.count(), 'badge': 'Ano letivo atual'},
+            {'label': 'Avaliacoes', 'value': Assessment.objects.count(), 'badge': 'Ciclos registrados'},
+        ],
+        'table_headers': ['Area', 'Indicador', 'Valor'],
+        'table_rows': [
+            ['Ensino', 'Media geral', f"{round(Grade.objects.aggregate(value=Avg('score')).get('value') or 0, 2)}"],
+            ['Ensino', 'Frequencias registradas', str(AttendanceRecord.objects.count())],
+            ['Ensino', 'Matriculas ativas', str(Enrollment.objects.filter(status=Enrollment.ACTIVE).count())],
+        ],
+        'quick_links': [
+            {'label': 'Abrir Alunos', 'url_name': 'students_page'},
+            {'label': 'Abrir Turmas', 'url_name': 'classes_page'},
+            {'label': 'Abrir Notas', 'url_name': 'grades_page'},
+            {'label': 'Abrir Frequencia', 'url_name': 'attendance_page'},
+        ],
+    }
+    return render(request, 'module_overview.html', context)
+
+
+def _people_module_page(request, module_key, config):
+    teachers = Teacher.objects.all()[:20]
+    context = {
+        'module_key': module_key,
+        'module_title': config['title'],
+        'module_description': config['description'],
+        'summary_cards': [
+            {'label': 'Docentes cadastrados', 'value': Teacher.objects.count(), 'badge': 'Base institucional'},
+            {'label': 'Turmas coordenadas', 'value': SchoolClass.objects.exclude(coordinator=None).count(), 'badge': 'Distribuicao ativa'},
+            {'label': 'Disciplinas alocadas', 'value': ClassSubject.objects.count(), 'badge': 'Alocacao atual'},
+        ],
+        'table_headers': ['Servidor', 'Matricula', 'Email'],
+        'table_rows': [[item.full_name, item.employee_code, item.email or '-'] for item in teachers],
+        'quick_links': [
+            {'label': 'Abrir Turmas', 'url_name': 'classes_page'},
+            {'label': 'Abrir Ensino', 'url_name': 'module_page', 'url_arg': 'ensino'},
+        ],
+    }
+    return render(request, 'module_overview.html', context)
+
+
+def _exit_module_page(request, module_key, config):
+    context = {
+        'module_key': module_key,
+        'module_title': config['title'],
+        'module_description': config['description'],
+        'summary_cards': [
+            {'label': 'Sessao local', 'value': 'Encerrar', 'badge': 'Controle manual'},
+            {'label': 'Retorno rapido', 'value': 'Painel', 'badge': 'Acesso seguro'},
+            {'label': 'Estado', 'value': 'Ativo', 'badge': 'Sistema online'},
+        ],
+        'table_headers': ['Acao', 'Descricao'],
+        'table_rows': [
+            ['Voltar ao inicio', 'Retorna para a pagina principal do sistema.'],
+            ['Fechar navegador', 'Encerramento manual no dispositivo local.'],
+            ['Manter sessao', 'Continuar navegando nos modulos.'],
+        ],
+        'quick_links': [
+            {'label': 'Voltar ao Painel', 'url_name': 'dashboard'},
+        ],
+    }
+    return render(request, 'module_overview.html', context)
