@@ -129,37 +129,90 @@ MODULE_CONFIG = {
     },
 }
 
+IN_PERSON_COURSES = [
+    'Tecnico em Administracao Integrada',
+    'Tecnico em Logistica Presencial',
+    'Tecnico em Informatica para Internet',
+    'Tecnico em Edificacoes Integrado',
+    'Tecnico em Mecanica Aplicada',
+    'Tecnico em Eletrotecnica Industrial',
+    'Tecnico em Eventos e Cerimonial',
+    'Tecnico em Quimica de Processos',
+    'Tecnico em Seguranca do Trabalho',
+    'Tecnico em Multimeios Didaticos',
+]
+
+REMOTE_COURSES = [
+    'Tecnico em Secretaria Escolar EAD',
+    'Tecnico em Administracao Publica EAD',
+    'Tecnico em Servicos Juridicos Remoto',
+    'Tecnico em Redes de Computadores EAD',
+    'Tecnico em Marketing Digital Remoto',
+    'Tecnico em Transacoes Imobiliarias EAD',
+    'Tecnico em Recursos Humanos EAD',
+    'Tecnico em Financas Remoto',
+    'Tecnico em Comercio Exterior EAD',
+    'Tecnico em Desenvolvimento de Sistemas Remoto',
+]
+
+FIRST_NAMES = [
+    'Ana', 'Bruno', 'Camila', 'Diego', 'Elisa', 'Felipe', 'Gabriela', 'Hugo', 'Isabela', 'Joao',
+    'Karen', 'Lucas', 'Marina', 'Nathan', 'Olivia', 'Paulo', 'Quezia', 'Rafael', 'Sofia', 'Tiago',
+]
+
+LAST_NAMES = [
+    'Almeida', 'Barros', 'Cardoso', 'Duarte', 'Esteves', 'Ferraz', 'Gomes', 'Henrique', 'Ivo', 'Jardim',
+    'Klein', 'Lacerda', 'Moraes', 'Nogueira', 'Oliveira', 'Pereira', 'Queiroz', 'Ramos', 'Santana', 'Teixeira',
+]
+
+TEACHER_SEED = [
+    ('DOC001', 'Ana Beatriz', 'ana@escola.edu.br'),
+    ('DOC002', 'Rafael Lima', 'rafael@escola.edu.br'),
+    ('DOC003', 'Carla Menezes', 'carla@escola.edu.br'),
+    ('DOC004', 'Daniel Rocha', 'daniel@escola.edu.br'),
+    ('DOC005', 'Fernanda Sousa', 'fernanda@escola.edu.br'),
+    ('DOC006', 'Guilherme Prado', 'guilherme@escola.edu.br'),
+]
+
+
+def _build_student_name(index):
+    first_name = FIRST_NAMES[(index - 1) % len(FIRST_NAMES)]
+    last_name = LAST_NAMES[((index - 1) * 3) % len(LAST_NAMES)]
+    return f'{first_name} {last_name} {index:03d}'
+
 
 def seed_school_data():
-    t1, _ = Teacher.objects.get_or_create(
-        employee_code='DOC001',
-        defaults={'full_name': 'Ana Beatriz', 'email': 'ana@escola.edu.br'},
-    )
-    t2, _ = Teacher.objects.get_or_create(
-        employee_code='DOC002',
-        defaults={'full_name': 'Rafael Lima', 'email': 'rafael@escola.edu.br'},
-    )
+    teachers = []
+    for employee_code, full_name, email in TEACHER_SEED:
+        teacher, _ = Teacher.objects.update_or_create(
+            employee_code=employee_code,
+            defaults={'full_name': full_name, 'email': email},
+        )
+        teachers.append(teacher)
 
-    c1, _ = SchoolClass.objects.get_or_create(
-        name='1A',
-        year=date.today().year,
-        shift=SchoolClass.MORNING,
-        defaults={'coordinator': t1, 'learning_mode': SchoolClass.IN_PERSON},
-    )
-    c2, _ = SchoolClass.objects.get_or_create(
-        name='2B',
-        year=date.today().year,
-        shift=SchoolClass.AFTERNOON,
-        defaults={'coordinator': t2, 'learning_mode': SchoolClass.REMOTE},
-    )
-    if c1.coordinator_id is None:
-        c1.coordinator = t1
-    c1.learning_mode = SchoolClass.IN_PERSON
-    c1.save(update_fields=['coordinator', 'learning_mode'])
-    if c2.coordinator_id is None:
-        c2.coordinator = t2
-    c2.learning_mode = SchoolClass.REMOTE
-    c2.save(update_fields=['coordinator', 'learning_mode'])
+    class_defaults = [
+        ('1A', SchoolClass.MORNING, SchoolClass.IN_PERSON, teachers[0]),
+        ('1B', SchoolClass.AFTERNOON, SchoolClass.IN_PERSON, teachers[2]),
+        ('2A', SchoolClass.NIGHT, SchoolClass.IN_PERSON, teachers[4]),
+        ('2B', SchoolClass.MORNING, SchoolClass.REMOTE, teachers[1]),
+        ('3A', SchoolClass.AFTERNOON, SchoolClass.REMOTE, teachers[3]),
+        ('3B', SchoolClass.NIGHT, SchoolClass.REMOTE, teachers[5]),
+    ]
+    classes = []
+    for name, shift, learning_mode, coordinator in class_defaults:
+        school_class, _ = SchoolClass.objects.get_or_create(
+            name=name,
+            year=date.today().year,
+            shift=shift,
+            defaults={'coordinator': coordinator, 'learning_mode': learning_mode},
+        )
+        school_class.coordinator = coordinator
+        school_class.learning_mode = learning_mode
+        school_class.save(update_fields=['coordinator', 'learning_mode'])
+        classes.append(school_class)
+
+    in_person_classes = [item for item in classes if item.learning_mode == SchoolClass.IN_PERSON]
+    remote_classes = [item for item in classes if item.learning_mode == SchoolClass.REMOTE]
 
     s1, _ = Subject.objects.get_or_create(
         code='MAT101',
@@ -170,64 +223,33 @@ def seed_school_data():
         defaults={'name': 'Portugues', 'workload_hours': 80},
     )
 
-    cs1, _ = ClassSubject.objects.get_or_create(school_class=c1, subject=s1, defaults={'teacher': t1})
-    cs2, _ = ClassSubject.objects.get_or_create(school_class=c1, subject=s2, defaults={'teacher': t2})
-    cs3, _ = ClassSubject.objects.get_or_create(school_class=c2, subject=s1, defaults={'teacher': t1})
-    cs4, _ = ClassSubject.objects.get_or_create(school_class=c2, subject=s2, defaults={'teacher': t2})
+    for index, school_class in enumerate(classes):
+        math_teacher = teachers[index % len(teachers)]
+        math_assignment, _ = ClassSubject.objects.get_or_create(
+            school_class=school_class,
+            subject=s1,
+            defaults={'teacher': math_teacher},
+        )
+        if math_assignment.teacher_id != math_teacher.id:
+            math_assignment.teacher = math_teacher
+            math_assignment.save(update_fields=['teacher'])
 
-    st1, _ = Student.objects.update_or_create(
-        registration='2026001',
-        defaults={
-            'full_name': 'Lia Nobre',
-            'birth_date': date(2010, 5, 13),
-            'guardian_name': 'Responsavel A-17',
-            'guardian_phone': '(11) 99999-1111',
-            'learning_mode': Student.IN_PERSON,
-            'abstract_course': 'Laboratorio Criativo Presencial',
-            'status': Student.ACTIVE,
-        },
-    )
-    st2, _ = Student.objects.update_or_create(
-        registration='2026002',
-        defaults={
-            'full_name': 'Caio Vilar',
-            'birth_date': date(2010, 8, 23),
-            'guardian_name': 'Responsavel B-09',
-            'guardian_phone': '(11) 98888-2222',
-            'learning_mode': Student.REMOTE,
-            'abstract_course': 'Trilha Digital Remota',
-            'status': Student.ATTENTION,
-        },
-    )
-    st3, _ = Student.objects.update_or_create(
-        registration='2026003',
-        defaults={
-            'full_name': 'Nina Aster',
-            'birth_date': date(2011, 2, 4),
-            'guardian_name': 'Responsavel C-21',
-            'guardian_phone': '(11) 97777-3333',
-            'learning_mode': Student.IN_PERSON,
-            'abstract_course': 'Oficina de Projeto Integrado',
-            'status': Student.ACTIVE,
-        },
-    )
-    st4, _ = Student.objects.update_or_create(
-        registration='2026004',
-        defaults={
-            'full_name': 'Theo Vale',
-            'birth_date': date(2011, 9, 14),
-            'guardian_name': 'Responsavel D-04',
-            'guardian_phone': '(11) 96666-4444',
-            'learning_mode': Student.REMOTE,
-            'abstract_course': 'Programa Sincrono Online',
-            'status': Student.INACTIVE,
-        },
-    )
+        language_teacher = teachers[(index + 1) % len(teachers)]
+        language_assignment, _ = ClassSubject.objects.get_or_create(
+            school_class=school_class,
+            subject=s2,
+            defaults={'teacher': language_teacher},
+        )
+        if language_assignment.teacher_id != language_teacher.id:
+            language_assignment.teacher = language_teacher
+            language_assignment.save(update_fields=['teacher'])
 
-    e1, _ = Enrollment.objects.get_or_create(student=st1, school_class=c1, defaults={'status': Enrollment.ACTIVE})
-    e2, _ = Enrollment.objects.get_or_create(student=st2, school_class=c1, defaults={'status': Enrollment.ACTIVE})
-    e3, _ = Enrollment.objects.get_or_create(student=st3, school_class=c2, defaults={'status': Enrollment.ACTIVE})
-    e4, _ = Enrollment.objects.get_or_create(student=st4, school_class=c2, defaults={'status': Enrollment.TRANSFERRED})
+    primary_in_person_class = in_person_classes[0]
+    primary_remote_class = remote_classes[0]
+    cs1 = ClassSubject.objects.get(school_class=primary_in_person_class, subject=s1)
+    cs2 = ClassSubject.objects.get(school_class=primary_in_person_class, subject=s2)
+    cs3 = ClassSubject.objects.get(school_class=primary_remote_class, subject=s1)
+    cs4 = ClassSubject.objects.get(school_class=primary_remote_class, subject=s2)
 
     a1, _ = Assessment.objects.get_or_create(
         class_subject=cs1,
@@ -250,35 +272,63 @@ def seed_school_data():
         defaults={'max_score': 10, 'assessment_date': date.today() - timedelta(days=1)},
     )
 
-    Grade.objects.update_or_create(assessment=a1, enrollment=e1, defaults={'score': 8.5})
-    Grade.objects.update_or_create(assessment=a1, enrollment=e2, defaults={'score': 6.5})
-    Grade.objects.update_or_create(assessment=a3, enrollment=e3, defaults={'score': 9.1})
-    Grade.objects.update_or_create(assessment=a3, enrollment=e4, defaults={'score': 7.3})
+    for index in range(1, 101):
+        registration = f'2026{index:03d}'
+        is_in_person = index <= 50
+        if index % 10 == 0:
+            student_status = Student.INACTIVE
+        elif index % 4 == 0:
+            student_status = Student.ATTENTION
+        else:
+            student_status = Student.ACTIVE
 
-    AttendanceRecord.objects.update_or_create(
-        class_subject=cs1,
-        enrollment=e1,
-        attendance_date=date.today() - timedelta(days=1),
-        defaults={'present': True},
-    )
-    AttendanceRecord.objects.update_or_create(
-        class_subject=cs1,
-        enrollment=e2,
-        attendance_date=date.today() - timedelta(days=1),
-        defaults={'present': False},
-    )
-    AttendanceRecord.objects.update_or_create(
-        class_subject=cs3,
-        enrollment=e3,
-        attendance_date=date.today() - timedelta(days=1),
-        defaults={'present': True},
-    )
-    AttendanceRecord.objects.update_or_create(
-        class_subject=cs3,
-        enrollment=e4,
-        attendance_date=date.today() - timedelta(days=1),
-        defaults={'present': True},
-    )
+        if is_in_person:
+            course_name = IN_PERSON_COURSES[(index - 1) % len(IN_PERSON_COURSES)]
+            class_choice = in_person_classes[(index - 1) % len(in_person_classes)]
+        else:
+            course_name = REMOTE_COURSES[(index - 51) % len(REMOTE_COURSES)]
+            class_choice = remote_classes[(index - 51) % len(remote_classes)]
+
+        student, _ = Student.objects.update_or_create(
+            registration=registration,
+            defaults={
+                'full_name': _build_student_name(index),
+                'birth_date': date(2008 + (index % 5), ((index - 1) % 12) + 1, ((index - 1) % 28) + 1),
+                'guardian_name': f'Responsavel {index:03d}',
+                'guardian_phone': f'(11) 9{(index % 9) + 1}{(index * 37) % 1000:03d}-{(index * 83) % 10000:04d}',
+                'learning_mode': Student.IN_PERSON if is_in_person else Student.REMOTE,
+                'abstract_course': course_name,
+                'status': student_status,
+            },
+        )
+
+        Enrollment.objects.filter(student=student).exclude(school_class=class_choice).delete()
+        enrollment_status = Enrollment.TRANSFERRED if student_status == Student.INACTIVE else Enrollment.ACTIVE
+        enrollment, _ = Enrollment.objects.update_or_create(
+            student=student,
+            school_class=class_choice,
+            defaults={'status': enrollment_status},
+        )
+
+        assessment = a1 if is_in_person else a3
+        score = round(6 + ((index * 7) % 35) / 10, 1)
+        Grade.objects.update_or_create(assessment=assessment, enrollment=enrollment, defaults={'score': score})
+
+        attendance_subject = cs1 if is_in_person else cs3
+        AttendanceRecord.objects.update_or_create(
+            class_subject=attendance_subject,
+            enrollment=enrollment,
+            attendance_date=date.today() - timedelta(days=1),
+            defaults={'present': index % 6 != 0 and student_status != Student.INACTIVE},
+        )
+
+    valid_registrations = [f'2026{index:03d}' for index in range(1, 101)]
+    Student.objects.filter(registration__startswith='2026').exclude(registration__in=valid_registrations).delete()
+
+    valid_class_pairs = {(name, shift) for name, shift, _learning_mode, _coordinator in class_defaults}
+    for stale_class in SchoolClass.objects.filter(year=date.today().year, name__in=[item[0] for item in class_defaults]):
+        if (stale_class.name, stale_class.shift) not in valid_class_pairs and not stale_class.enrollments.exists():
+            stale_class.delete()
 
     Announcement.objects.get_or_create(
         title='Reuniao com responsaveis',
@@ -287,6 +337,10 @@ def seed_school_data():
     Announcement.objects.get_or_create(
         title='Diario liberado',
         defaults={'body': 'Lacamento de notas do bimestre disponivel para docentes.', 'level': Announcement.SUCCESS},
+    )
+    Announcement.objects.get_or_create(
+        title='Ata docente homologada',
+        defaults={'body': 'Documento oficial da reuniao pedagogica publicado para consulta interna.', 'level': Announcement.INFO},
     )
 
     AdministrativeProcess.objects.get_or_create(
@@ -328,13 +382,13 @@ def seed_school_data():
     )
 
     project_defaults = [
-        ('Projeto Horizonte', InstitutionalProject.RESEARCH, t1, InstitutionalProject.ACTIVE),
-        ('Rede Comunidade Viva', InstitutionalProject.EXTENSION, t2, InstitutionalProject.ACTIVE),
-        ('Programa Global Campus', InstitutionalProject.INTERNATIONAL, t1, InstitutionalProject.DRAFT),
-        ('Painel de Indicadores 2026', InstitutionalProject.DEVELOPMENT, t2, InstitutionalProject.ACTIVE),
-        ('Ciclo de Apoio ao Estudante', InstitutionalProject.STUDENT, t1, InstitutionalProject.ACTIVE),
-        ('Campanha Institucional 2026', InstitutionalProject.COMMUNICATION, t2, InstitutionalProject.ACTIVE),
-        ('Trilha de Conformidade Interna', InstitutionalProject.AUDIT, t1, InstitutionalProject.DRAFT),
+        ('Projeto Horizonte', InstitutionalProject.RESEARCH, teachers[0], InstitutionalProject.ACTIVE),
+        ('Rede Comunidade Viva', InstitutionalProject.EXTENSION, teachers[1], InstitutionalProject.ACTIVE),
+        ('Programa Global Campus', InstitutionalProject.INTERNATIONAL, teachers[0], InstitutionalProject.DRAFT),
+        ('Painel de Indicadores 2026', InstitutionalProject.DEVELOPMENT, teachers[1], InstitutionalProject.ACTIVE),
+        ('Ciclo de Apoio ao Estudante', InstitutionalProject.STUDENT, teachers[2], InstitutionalProject.ACTIVE),
+        ('Campanha Institucional 2026', InstitutionalProject.COMMUNICATION, teachers[3], InstitutionalProject.ACTIVE),
+        ('Trilha de Conformidade Interna', InstitutionalProject.AUDIT, teachers[4], InstitutionalProject.DRAFT),
     ]
     for idx, project in enumerate(project_defaults, start=1):
         title, project_type, coordinator, status = project
@@ -394,6 +448,7 @@ def dashboard(request):
         'recent_enrollments': Enrollment.objects.select_related('student', 'school_class')[:8],
         'recent_attendance': AttendanceRecord.objects.select_related('enrollment__student').order_by('-attendance_date')[:8],
         'class_distribution': class_distribution,
+        'total_courses': len(IN_PERSON_COURSES) + len(REMOTE_COURSES),
     }
     return render(request, 'dashboard.html', context)
 
@@ -552,6 +607,96 @@ def agenda_page(request):
         {'date': date.today() + timedelta(days=7), 'title': 'Simulado geral', 'type': 'Avaliacao'},
     ]
     return render(request, 'agenda.html', {'events': upcoming})
+
+
+def class_diary_page(request):
+    seed_school_data()
+    classes = SchoolClass.objects.select_related('coordinator').order_by('learning_mode', 'name')
+    requested_class_id = request.GET.get('class_id')
+    selected_class = classes.filter(pk=requested_class_id).first() if requested_class_id else classes.first()
+
+    diary_rows = []
+    attendance_rate = 0
+    subject_load = []
+    if selected_class is not None:
+        class_subjects = list(selected_class.subjects.select_related('subject', 'teacher').all())
+        enrollments = list(
+            Enrollment.objects.filter(school_class=selected_class)
+            .select_related('student')
+            .order_by('student__full_name')
+        )
+
+        subject_load = [
+            {'name': item.subject.name, 'teacher': item.teacher.full_name, 'code': item.subject.code}
+            for item in class_subjects
+        ]
+
+        records = AttendanceRecord.objects.filter(
+            class_subject__school_class=selected_class,
+            enrollment__in=enrollments,
+        )
+        total_attendance = records.count()
+        present_attendance = records.filter(present=True).count()
+        attendance_rate = round((present_attendance / total_attendance) * 100, 1) if total_attendance else 0
+
+        for enrollment in enrollments:
+            latest_grade = (
+                Grade.objects.filter(
+                    enrollment=enrollment,
+                    assessment__class_subject__school_class=selected_class,
+                )
+                .order_by('-assessment__assessment_date')
+                .first()
+            )
+            student_records = records.filter(enrollment=enrollment)
+            total_records = student_records.count()
+            present_records = student_records.filter(present=True).count()
+            student_attendance = round((present_records / total_records) * 100, 1) if total_records else 0
+            diary_rows.append(
+                {
+                    'student': enrollment.student.full_name,
+                    'registration': enrollment.student.registration,
+                    'course': enrollment.student.abstract_course,
+                    'mode': enrollment.student.get_learning_mode_display(),
+                    'status': enrollment.student.get_status_display(),
+                    'grade': latest_grade.score if latest_grade else '-',
+                    'attendance': f'{student_attendance}%',
+                }
+            )
+
+    context = {
+        'classes': classes,
+        'selected_class': selected_class,
+        'diary_rows': diary_rows,
+        'attendance_rate': attendance_rate,
+        'total_courses': len(IN_PERSON_COURSES) + len(REMOTE_COURSES),
+        'active_count': Student.objects.filter(status=Student.ACTIVE).count(),
+        'subject_load': subject_load,
+    }
+    return render(request, 'class_diary.html', context)
+
+
+def teachers_minutes_page(request):
+    seed_school_data()
+    deliberations = [
+        'Ratificada a distribuicao de 20 cursos institucionais, sendo 10 presenciais e 10 remotos, para atendimento regular do periodo letivo.',
+        'Aprovado o acompanhamento semanal do diario de classe com prioridade para turmas com alunos em situacao de atencao.',
+        'Definida a comunicacao formal aos responsaveis de estudantes inativos para regularizacao academica e documental.',
+        'Homologado o cronograma de revisao pedagogica e de consolidacao das notas parciais pelas coordenacoes.',
+    ]
+    context = {
+        'meeting_date': date.today(),
+        'teachers': Teacher.objects.all(),
+        'total_students': Student.objects.count(),
+        'active_students': Student.objects.filter(status=Student.ACTIVE).count(),
+        'attention_students': Student.objects.filter(status=Student.ATTENTION).count(),
+        'inactive_students': Student.objects.filter(status=Student.INACTIVE).count(),
+        'in_person_students': Student.objects.filter(learning_mode=Student.IN_PERSON).count(),
+        'remote_students': Student.objects.filter(learning_mode=Student.REMOTE).count(),
+        'total_courses': len(IN_PERSON_COURSES) + len(REMOTE_COURSES),
+        'deliberations': deliberations,
+    }
+    return render(request, 'teachers_minutes.html', context)
 
 
 # Module pages

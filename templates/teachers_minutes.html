@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Ata dos Professores | SUAP{% endblock %}
+{% block content %}
+<section class="breadcrumb">Navegação > Ata dos Professores > Gestão Escolar</section>
+
+<section class="card minutes-sheet">
+  <header class="minutes-header">
+    <p class="minutes-kicker">Documento Oficial</p>
+    <h1>Ata da Reuniao Pedagogica dos Professores</h1>
+    <p>
+      Aos {{ meeting_date|date:"d/m/Y" }}, nas dependencias da unidade escolar,
+      foi realizada reuniao ordinaria do corpo docente para deliberacao sobre organizacao academica, diario de classe e acompanhamento dos estudantes.
+    </p>
+  </header>
+
+  <section class="minutes-section">
+    <h2>1. Composicao da Sessao</h2>
+    <p>
+      Registrou-se a presenca dos docentes abaixo relacionados, convocados pela coordenacao pedagógica, para apreciação das pautas do periodo letivo.
+    </p>
+    <div class="signature-grid">
+      {% for teacher in teachers %}
+      <div class="signature-card">
+        <strong>{{ teacher.full_name }}</strong>
+        <span>{{ teacher.employee_code }}</span>
+        <small>{{ teacher.email }}</small>
+      </div>
+      {% endfor %}
+    </div>
+  </section>
+
+  <section class="minutes-section">
+    <h2>2. Relatorio Academico</h2>
+    <div class="grid three">
+      <article class="card">
+        <h3>Alunos</h3>
+        <p class="kpi">{{ total_students }}</p>
+        <span class="badge badge-neutral">{{ active_students }} ativos</span>
+      </article>
+      <article class="card">
+        <h3>Modalidades</h3>
+        <p class="kpi">{{ total_courses }}</p>
+        <span class="badge badge-success">{{ in_person_students }} presenciais</span>
+      </article>
+      <article class="card">
+        <h3>Acompanhamento</h3>
+        <p class="kpi">{{ attention_students }}</p>
+        <span class="badge badge-warning">{{ inactive_students }} inativos</span>
+      </article>
+    </div>
+    <p class="minutes-paragraph">
+      Consta em ata que a base institucional permanece organizada em 20 cursos, sendo {{ in_person_students }} estudantes vinculados a trilhas presenciais e
+      {{ remote_students }} estudantes vinculados a trilhas remotas, observadas as regras internas de acompanhamento e regularidade.
+    </p>
+  </section>
+
+  <section class="minutes-section">
+    <h2>3. Deliberacoes</h2>
+    <ol class="minutes-list">
+      {% for item in deliberations %}
+      <li>{{ item }}</li>
+      {% endfor %}
+    </ol>
+  </section>
+
+  <section class="minutes-section">
+    <h2>4. Encerramento</h2>
+    <p class="minutes-paragraph">
+      Nada mais havendo a tratar, foi lavrada a presente ata, lida e aprovada pelos presentes, ficando autorizada sua consulta como registro formal das decisões
+      pedagógicas e administrativas ora consignadas.
+    </p>
+    <div class="minutes-footer">
+      <div class="signature-line">Coordenacao Pedagogica</div>
+      <div class="signature-line">Secretaria Academica</div>
+    </div>
+  </section>
+</section>
+{% endblock %}

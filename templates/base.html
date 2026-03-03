@@ -5,11 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}SUAP Escola{% endblock %}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js/dist/Chart.min.css">
-  <link rel="stylesheet" href="/static/css/suap.css">
+  <link rel="stylesheet" href="/static/css/suap.css?v=20260303-2">
 </head>
 <body class="page-transition">
+  <div class="govbar">
+    <div class="govbar-inner">
+      <span class="govbar-badge">Gov.br</span>
+      <span class="govbar-text">Portal institucional de gestão escolar</span>
+    </div>
+  </div>
   <header class="topbar">
-    <div class="brand">SUAP Django Escola</div>
+    <div class="brand-block">
+      <div class="brand-kicker">Governo Federal</div>
+      <div class="brand">SUAP Escola</div>
+    </div>
     <nav class="nav-main">
       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}">Painel</a>
       <a class="nav-link {% if '/alunos/' in request.path %}active{% endif %}" href="{% url 'students_page' %}">Alunos</a>
@@ -18,6 +27,8 @@
       <a class="nav-link {% if '/notas/' in request.path %}active{% endif %}" href="{% url 'grades_page' %}">Notas</a>
       <a class="nav-link {% if '/frequencia/' in request.path %}active{% endif %}" href="{% url 'attendance_page' %}">Frequencia</a>
       <a class="nav-link {% if '/agenda/' in request.path %}active{% endif %}" href="{% url 'agenda_page' %}">Agenda</a>
+      <a class="nav-link {% if '/diario-classe/' in request.path %}active{% endif %}" href="{% url 'class_diary_page' %}">Diario</a>
+      <a class="nav-link {% if '/ata-professores/' in request.path %}active{% endif %}" href="{% url 'teachers_minutes_page' %}">Ata</a>
     </nav>
   </header>
   <div class="page shell" id="pageContent">
@@ -25,6 +36,8 @@
       <div class="sidebar-title">Módulos</div>
       <nav class="sidebar-nav">
         <a class="sidebar-link" href="{% url 'dashboard' %}">Início</a>
+        <a class="sidebar-link" href="{% url 'class_diary_page' %}">Diário de Classe</a>
+        <a class="sidebar-link" href="{% url 'teachers_minutes_page' %}">Ata dos Professores</a>
         <a class="sidebar-link" href="{% url 'module_page' 'documentos-processos' %}">Documentos/Processos</a>
         <a class="sidebar-link" href="{% url 'module_page' 'programa-gestao' %}">Programa de Gestão</a>
         <a class="sidebar-link" href="{% url 'module_page' 'ensino' %}">Ensino</a>
@@ -54,7 +67,13 @@
       {% block content %}{% endblock %}
     </main>
   </div>
+  <footer class="site-footer">
+    <div class="site-footer-inner">
+      <strong>Gov.br</strong>
+      <span>Ambiente escolar com linguagem visual institucional e navegação unificada.</span>
+    </div>
+  </footer>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/static/js/dashboard.js"></script>
+  <script src="/static/js/dashboard.js?v=20260303-2"></script>
 </body>
 </html>

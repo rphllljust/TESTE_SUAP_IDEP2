@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+{% block title %}Diario de Classe | SUAP{% endblock %}
+{% block content %}
+<section class="breadcrumb">Navegação > Diario de Classe > Gestão Escolar</section>
+
+<section class="grid three">
+  <article class="card section-box">
+    <h3>Turma Selecionada</h3>
+    <p class="kpi">{% if selected_class %}{{ selected_class.name }}{% else %}-{% endif %}</p>
+    <span class="badge badge-neutral">{% if selected_class %}{{ selected_class.get_learning_mode_display }}{% else %}Sem turma{% endif %}</span>
+  </article>
+  <article class="card section-box">
+    <h3>Frequencia Media</h3>
+    <p class="kpi">{{ attendance_rate }}%</p>
+    <span class="badge badge-success">Diario consolidado</span>
+  </article>
+  <article class="card section-box">
+    <h3>Base Academica</h3>
+    <p class="kpi">{{ total_courses }}</p>
+    <span class="badge badge-info">{{ active_count }} alunos ativos</span>
+  </article>
+</section>
+
+<section class="card section-box">
+  <div class="title-row">
+    <h2>Filtro do Diario</h2>
+  </div>
+  <form method="get" class="form-inline compact-inline">
+    <select name="class_id">
+      {% for school_class in classes %}
+      <option value="{{ school_class.id }}" {% if selected_class and school_class.id == selected_class.id %}selected{% endif %}>
+        {{ school_class.name }} | {{ school_class.get_shift_display }} | {{ school_class.get_learning_mode_display }}
+      </option>
+      {% endfor %}
+    </select>
+    <button class="btn btn-primary" type="submit">Atualizar</button>
+    <a class="btn btn-secondary" href="{% url 'attendance_page' %}">Registrar Frequencia</a>
+    <a class="btn btn-secondary" href="{% url 'grades_page' %}">Lancar Nota</a>
+  </form>
+</section>
+
+<section class="grid two">
+  <article class="card section-box">
+    <h2>Componente Curricular</h2>
+    <div class="subject-list">
+      {% for item in subject_load %}
+      <div class="subject-chip">
+        <strong>{{ item.name }}</strong>
+        <span>{{ item.code }}</span>
+        <small>{{ item.teacher }}</small>
+      </div>
+      {% empty %}
+      <p>Nenhuma disciplina vinculada.</p>
+      {% endfor %}
+    </div>
+  </article>
+
+  <article class="card section-box">
+    <h2>Controle Formal</h2>
+    <p class="document-note">
+      Este diario consolida frequencia, nota mais recente e situacao academica, servindo como registro responsivo para acompanhamento pedagógico.
+    </p>
+  </article>
+</section>
+
+<section class="card section-box">
+  <div class="title-row">
+    <h2>Registro dos Alunos</h2>
+    <span class="badge badge-neutral">{% if selected_class and selected_class.coordinator %}Coordenação: {{ selected_class.coordinator.full_name }}{% endif %}</span>
+  </div>
+  <div class="responsive-table-wrap">
+    <table class="responsive-table">
+      <thead>
+        <tr>
+          <th>Aluno</th>
+          <th>Matrícula</th>
+          <th>Curso</th>
+          <th>Modalidade</th>
+          <th>Status</th>
+          <th>Ultima Nota</th>
+          <th>Frequencia</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in diary_rows %}
+        <tr>
+          <td data-label="Aluno">{{ row.student }}</td>
+          <td data-label="Matrícula">{{ row.registration }}</td>
+          <td data-label="Curso">{{ row.course }}</td>
+          <td data-label="Modalidade">{{ row.mode }}</td>
+          <td data-label="Status">{{ row.status }}</td>
+          <td data-label="Ultima Nota">{{ row.grade }}</td>
+          <td data-label="Frequencia">{{ row.attendance }}</td>
+        </tr>
+        {% empty %}
+        <tr>
+          <td colspan="7">Nenhum registro encontrado para a turma selecionada.</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+{% endblock %}

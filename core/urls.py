@@ -2,6 +2,7 @@
 from .views import (
     agenda_page,
     attendance_page,
+    class_diary_page,
     classes_page,
     dashboard,
     enrollments_page,
@@ -11,6 +12,7 @@ from .views import (
     student_delete,
     student_update,
     students_page,
+    teachers_minutes_page,
 )
 
 urlpatterns = [
@@ -24,5 +26,7 @@ urlpatterns = [
     path('notas/', grades_page, name='grades_page'),
     path('frequencia/', attendance_page, name='attendance_page'),
     path('agenda/', agenda_page, name='agenda_page'),
+    path('diario-classe/', class_diary_page, name='class_diary_page'),
+    path('ata-professores/', teachers_minutes_page, name='teachers_minutes_page'),
     path('modulos/<slug:module_key>/', module_page, name='module_page'),
 ]
