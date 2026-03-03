@@ -76,6 +76,12 @@ body {
   gap: 2px;
 }
 
+.brand-sign {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .brand-kicker {
   font-size: 12px;
   text-transform: uppercase;
@@ -87,6 +93,11 @@ body {
   font-size: 26px;
   font-weight: 700;
   letter-spacing: -0.02em;
+}
+
+.brand-sub {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.82);
 }
 
 .nav-main {
@@ -225,6 +236,7 @@ body {
   padding: 16px;
   box-shadow: 0 10px 24px rgba(7, 29, 65, 0.06);
   transition: transform 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+  border-top: 4px solid var(--suap-primary);
 }
 
 .card:hover {
@@ -366,6 +378,15 @@ th {
   letter-spacing: 0.03em;
   color: var(--text-soft);
   background: #f8fafc;
+  border-top: 2px solid var(--suap-primary);
+}
+
+tbody tr:nth-child(even) {
+  background: #f3f6fb;
+}
+
+tbody tr:hover {
+  background: #e8f0ff;
 }
 
 .form-grid p {

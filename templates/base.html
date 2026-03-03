@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>{% block title %}SUAP Escola{% endblock %}</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/chart.js/dist/Chart.min.css">
-  <link rel="stylesheet" href="/static/css/suap.css?v=20260303-2">
+  <link rel="stylesheet" href="/static/css/suap.css?v=20260303-3">
 </head>
 <body class="page-transition">
   <div class="govbar">
@@ -15,9 +15,12 @@
     </div>
   </div>
   <header class="topbar">
-    <div class="brand-block">
-      <div class="brand-kicker">Governo Federal</div>
-      <div class="brand">SUAP Escola</div>
+    <div class="brand-sign">
+      <div class="brand-block">
+        <div class="brand-kicker">Governo Federal</div>
+        <div class="brand">SUAP Escola</div>
+        <div class="brand-sub">Instituto Estadual de Desenvolvimento da Educação Profissional</div>
+      </div>
     </div>
     <nav class="nav-main">
       <a class="nav-link {% if request.path == '/' %}active{% endif %}" href="{% url 'dashboard' %}">Painel</a>
@@ -74,6 +77,6 @@
     </div>
   </footer>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="/static/js/dashboard.js?v=20260303-2"></script>
+  <script src="/static/js/dashboard.js?v=20260303-3"></script>
 </body>
 </html>
